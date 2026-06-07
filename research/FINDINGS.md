@@ -47,3 +47,20 @@ Tested ~40 variants across families (Bollinger fade, RSI2 Connors, RSI2+trend, A
 
 ## Decision
 Locked in the BB+RSI model and ported to MQL4 `Experts/Sale/MeanReverter.mq4` (uses real iBands = population std). Stopped optimizing to avoid overfitting the single 20y NZDCAD path. Forward-test on broker data before any live use.
+
+---
+# "More trades / combine indicators" investigation + cross-pair validation
+
+## Q: few trades — loosen band / add MACD for more?
+Tested loosening BB band (k 1.5-2.5) + RSI (25/75, 30/70), with and without MACD-histogram-turn confirmation. RESULT: every looser variant -> OOS PF < 1 (0.90-0.98), DD 13-43%, even though trades rose to 200-460/yr. Adding indicators does NOT create edge; it only filters. Strict k3+RSI20/80 remains the only OOS-profitable config. Conclusion: "few trades" is a feature (waits for rare real dislocations), not a bug to fix by loosening.
+
+## Better answer: run the SAME strict rules on multiple mean-reverting crosses
+Same model (BB20 k3 fade + RSI14 20/80, SL4*ATR, TP2.5*ATR, exit-at-mid, 0.5% risk), population-std:
+- NZDCAD (2006-2026): OOS PF 1.142, DD 3.1%, n495
+- AUDCAD (2024-2026): PF 1.758, DD 1.4%, n139   <- out-of-sample PAIR (model never tuned on it)
+- AUDNZD (2024-2026): PF 1.443, DD 1.9%, n139   <- out-of-sample PAIR
+Edge holds on unseen pairs => genuine mean-reversion behavior of AUD/NZD/CAD commodity crosses, not NZDCAD curve-fit. (AUDCAD/AUDNZD only 2.4y data -> treat magnitude cautiously, but direction is clear.)
+NOTE: EURUSD30 read perm error this run; EURUSD trend-edge already shown thin earlier anyway.
+
+## Recommendation
+Deploy MeanReverter as a PORTFOLIO across NZDCAD+AUDCAD+AUDNZD (multi-chart, distinct magics) -> ~3x trade count, diversified, better combined risk-adjusted return, WITHOUT loosening the entry. This is the correct way to get "more trades".
