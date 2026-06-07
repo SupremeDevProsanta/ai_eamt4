@@ -6,6 +6,20 @@ Format: `[date] short description — files affected — [detail-file](./detail-
 
 ---
 
+## How to use this memory system
+
+On startup, read this file (`memory.md`) for a one-line brief of every task. For full detail, open the linked detail file or the matching dated entry in [`worklog.md`](./worklog.md). When a task is done: append the detail to `worklog.md`, then add/refresh the one-line brief here. Every code change bumps the EA `#define VERSION` and is committed + pushed to GitHub (`SupremeDevProsanta/ai_eamt4`).
+
+---
+
+## 2026-06-07
+
+- **Git version control + GitHub push.** Set up versioning workflow (VERSION bump + commit per change). MT4 folders are on a mount that blocks in-place git, so a working copy is pushed to `github.com/SupremeDevProsanta/ai_eamt4` (token at `E:\project\github\git_token.txt`). Pushed baseline v3.1, v3.2 (logger), and `.gitattributes`. EA now at **v3.2**.
+  - Files: repo `ai_eamt4` (Experts/Sale, Include/Sale, document, memory)
+  - Detail: [worklog.md](./worklog.md) → 2026-06-07
+
+---
+
 ## 2026-06-01
 
 - **MavericProPlus refactor — Phase 0: dead code removal.** Removed `Open_Pos_1()`, `DrawObjects()`, 5 commented-out trend blocks, 8 commented `GetLinearRegressionSlope` calls. File 1454 → 1376 lines. Zero behavior change.
@@ -20,10 +34,4 @@ Format: `[date] short description — files affected — [detail-file](./detail-
   - Files: (read-only) `Sale/MavericProPlus.mq4`, `Include/Sale/*.mqh`
   - Detail: [2026-06-01-mavericproplus-logic-analysis.md](./2026-06-01-mavericproplus-logic-analysis.md)
 
-- **MavericProPlus Phase 3: entry/outcome condition logger.** Added `Include/Sale/EntryLogger.mqh` + wired into EA (include, globals, `ApplyComment` label capture, init register, 4× per-tick `Track`). Logs per-entry & per-add condition snapshots (MA stack, SAR, ma-cross, slopes, stoch/CCI, H1/H4 trend) and per-basket outcomes (max grid depth, peak floating drawdown, final P/L) to two CSVs. Behaviour-neutral. Backup `MavericProPlus.mq4.prelogger.bak`. Not yet compiled in MetaEditor.
-  - Files: `Sale/MavericProPlus.mq4`, `Include/Sale/EntryLogger.mqh`
-  - Detail: [2026-06-01-entry-logger-phase3.md](./2026-06-01-entry-logger-phase3.md)
-
-- **MavericProPlus CheckTrend correctness audit (read-only).** Reviewed all ~57 `CheckTrend_NN`/`Turbo` functions + return-value census vs caller usage. Found: inverted/dead direction usage (e.g. BuySystem uses `_15`/`_8` which are DOWN-only), 3 provably-impossible conditions (`_2`,`_19`,`_29`), mislabeled UP/DOWN trees (`_21`,`_23`,`Turbo_2`), heavy curve-fit/over-fitting, nested non-overlapping range tests. Conclusion: signal layer is largely noise; profitability (if any) comes from the martingale, not predictive edge. No code changed.
-  - Files: (read-only) `Include/Sale/Trend_Math_Terex2.mqh`
-  - Detail: [document/AUDIT_CheckTrend_correctness.md](../document/AUDIT_CheckTrend_correctness.md)
+- **MavericProPlus Phase 3: entry/outcome condition logger.** Added `Include/Sale/EntryLogger.mqh` + wired into EA (include, globals, `ApplyComment` label capture, init register, 4× per-tick `Track`). Logs per-entry & per-add condition snapshots (MA stack, SAR, ma-cross, slopes, stoch/CCI, H1/H4 trend) and per-basket outcomes (max grid depth, peak floating drawdown, final P/L) to two CSVs. Behaviour-n
