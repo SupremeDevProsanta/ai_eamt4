@@ -6,6 +6,12 @@ Day-by-day timeline of all work. Newest entries on top within each day.
 
 ## 2026-06-07 (Sunday)
 
+### "More trades / combine indicators?" tested + cross-pair validation
+User asked why so few trades (~36 in 5y on USDCHF visual) and why not combine indicators (screenshot showed USDCHF+MACD).
+- Tested loosening BB band (k1.5-2.5) + looser RSI + MACD-histogram-turn confirmation. EVERY looser variant went OOS PF<1 (0.90-0.98), DD 13-43%, despite 200-460 trades/yr. Adding indicators only filters; it does not create edge. Strict k3+RSI20/80 stays the only OOS-profitable config. "Few trades" is a feature (waits for rare real dislocations).
+- Correct way to get more trades = run the SAME strict rules on multiple mean-reverting crosses. Cross-pair test (model tuned only on NZDCAD): NZDCAD OOS PF1.14/DD3.1%, AUDCAD PF1.76/DD1.4%, AUDNZD PF1.44/DD1.9%. Edge holds on UNSEEN pairs → genuine commodity-cross mean-reversion, not curve-fit. (AUDCAD/AUDNZD only 2.4y data — magnitude cautious, direction clear.)
+- Recommendation: deploy MeanReverter as a PORTFOLIO (NZDCAD+AUDCAD+AUDNZD, multi-chart distinct magics) for ~3x diversified trade count without loosening entry. Files: `research/round4.py`, `research/crosspair.py`. Pushed (55c7f69).
+
 ### Iterative strategy search + final EA: MeanReverter v1.0
 Ran an OOS-ranked iterative loop (~40 variants, train 2006-2016 / test 2016-2026) over strategy families: Bollinger fade, RSI2 (Connors), RSI2+trend, ATR-stretch. Engine in `research/engine.py`, rounds in `round1-3.py`.
 - RSI2 families blew up OOS (DD 60-100%) → rejected. ATR-stretch marginal (OOS ~0.95).
@@ -21,11 +27,4 @@ Built a fast Python backtest harness using the broker HST bar data (`history/ICM
 Cost model: ECN 0.3 pip + $7/lot commission, %-risk sizing, single position, hard stop, no martingale.
 **Findings:**
 - **Trend-following REJECTED on NZDCAD** — PF 0.44 base (blew up); even at ZERO spread only PF 0.79-0.88 → no real edge. NZDCAD does not trend cleanly. (EURUSD trend edge is real but thin: PF 1.03 zero-spread, ~0.97 at 2pip — killed by costs + overtrading. Confirms TrendRider needs a trending pair + ECN costs, not NZDCAD.)
-- **Mean-reversion VALIDATED on NZDCAD** — fade price >=4*ATR from SMA100 + RSI<=15/>=85, TP 2*ATR, hard stop 3.5*ATR, time stop 72 bars, 0.5% risk. **Survives out-of-sample**: train 2006-2016 PF 1.26 DD 3.5%; test 2016-2026 PF 1.07 DD 5.9%. Overfit variants (looser RSI) correctly went PF<1 OOS and were rejected.
-**Why this matters:** This is the user's "huge loss" insight playing out — the martingale only "worked" on NZDCAD *because NZDCAD mean-reverts*; it had a hidden blowup tail. A proper risk-bounded MR system captures the same reversion edge with bounded <6% drawdown instead of 80% ruin. Modest (~50 trades/yr, small net) but real and robust.
-**Caveats recorded:** cost model is an estimate; usd_per_pip for NZDCAD approximate; thin margin sensitive to real fills — validate on broker tick data before live.
-**Next:** port validated MR rules to a clean MQL4 EA; test MR on other rangebound crosses (AUDCAD/AUDNZD/EURCHF); re-confirm with real broker spread.
-
-### New EA: TrendRider v1.0 (fresh trend-following, no martingale)
-Built a clean-room standalone EA `Experts/Sale/TrendRider.mq4` per user request — a genuine trend-following system, not a patch on MavericProPlus, and with NO dependency on the tangled Trend_Math includes.
-Design (all four user choices folded in: multi-symbol, trend+pyramiding, AT
+- **Mean-reversion VALIDATED on NZDCAD** — fade price >=4*ATR from SMA100 + RSI<=15/>=85, TP 2*ATR, hard stop 3.5*ATR, time stop 72 bars, 0.5% risk. **Survives out-of-sample**: t
