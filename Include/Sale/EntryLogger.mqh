@@ -5,6 +5,8 @@
 //|              per-basket outcomes (drawdown / grid depth),        |
 //|              and per-bar root-cause replay (look-back/forward)   |
 //|              for baskets that breach acceptable drawdown.        |
+//|        v3.4: also captures still-open baskets (end-of-test       |
+//|              blowups) via Flush() and mid-run breach dumps.      |
 //|        No trading logic. Safe to include and remove.            |
 //+------------------------------------------------------------------+
 #property strict
@@ -25,17 +27,13 @@ class EntryLogger
 private:
    string m_entryFile;
    string m_outcomeFile;
-   string m_rootFile;          // per-bar root-cause replay
+   string m_rootFile;
    bool   m_enabled;
 
-   // root-cause trigger thresholds (basket flagged if EITHER breached)
-   double m_ddMoneyTrigger;    // e.g. 50.0  -> peak floating loss worse than -50
-   int    m_depthTrigger;      // e.g. 5     -> grid reached >=5 levels
+   double m_ddMoneyTrigger;
+   int    m_depthTrigger;
+   int    m_lookBack;
 
-   // replay window
-   int    m_lookBack;          // bars before entry
-
-   // per-slot tracking state (index = slot, max 8 baskets)
    int      m_prevCount[8];
    int      m_maxDepth[8];
    double   m_peakDD[8];
@@ -45,6 +43,8 @@ private:
    int      m_openDir[8];
    string   m_openLabel[8];
    int      m_slotMagic[8];
+   bool     m_dumped[8];
+   bool     m_openBreached[8];
    int      m_nSlots;
 
    void WriteHeaderIfNew(string fname, string header)
@@ -56,6 +56,22 @@ private:
    }
 
    string DirStr(int d) { return (d==OP_BUY ? "BUY" : (d==OP_SELL ? "SELL" : "NA")); }
+
+   void WriteOutcomeOpen(int slot, int magic, bool bDD, bool bDepth)
+   {
+      int h = FileOpen(m_outcomeFile, FILE_READ|FILE_WRITE|FILE_CSV, ',');
+      if(h < 0) return;
+      FileSeek(h, 0, SEEK_END);
+      FileWrite(h,
+         Symbol(),
+         TimeToStr(m_openTime[slot], TIME_DATE|TIME_SECONDS),
+         "OPEN_AT_END",
+         magic, DirStr(m_openDir[slot]), m_maxDepth[slot],
+         DoubleToStr(m_peakDD[slot],2), DoubleToStr(m_lastProfit[slot],2),
+         m_openLabel[slot],
+         (bDD?"1":"0"), (bDepth?"1":"0"));
+      FileClose(h);
+   }
 
 public:
    void EntryLogger()
@@ -79,6 +95,7 @@ public:
       {
          m_prevCount[i]=0; m_maxDepth[i]=0; m_peakDD[i]=0; m_lastProfit[i]=0;
          m_openTime[i]=0;  m_openPrice[i]=0; m_openDir[i]=-1; m_openLabel[i]=""; m_slotMagic[i]=0;
+         m_dumped[i]=false; m_openBreached[i]=false;
       }
 
       WriteHeaderIfNew(m_entryFile,
@@ -223,12 +240,14 @@ public:
       {
          if(m_prevCount[slot] == 0)
          {
-            m_openTime[slot]  = TimeCurrent();
-            m_openPrice[slot] = price;
-            m_maxDepth[slot]  = cnt;
-            m_peakDD[slot]    = prof;
-            m_openDir[slot]   = dir;
-            m_openLabel[slot] = lastSignalLabel;
+            m_openTime[slot]    = TimeCurrent();
+            m_openPrice[slot]   = price;
+            m_maxDepth[slot]    = cnt;
+            m_peakDD[slot]      = prof;
+            m_openDir[slot]     = dir;
+            m_openLabel[slot]   = lastSignalLabel;
+            m_dumped[slot]      = false;
+            m_openBreached[slot]= false;
             WriteRow("ENTRY", slot, magic, dir, tm.GetLotSize(), price, cnt, lastSignalLabel, trend, prof);
          }
          else
@@ -243,6 +262,14 @@ public:
          if(prof < m_peakDD[slot]) m_peakDD[slot] = prof;
          if(cnt  > m_maxDepth[slot]) m_maxDepth[slot] = cnt;
          m_lastProfit[slot] = prof;
+
+         bool bDD    = (m_peakDD[slot]  <= -m_ddMoneyTrigger);
+         bool bDepth = (m_maxDepth[slot] >= m_depthTrigger);
+         if((bDD || bDepth) && !m_dumped[slot])
+         {
+            DumpRootCause(slot, magic);
+            m_dumped[slot] = true;
+         }
       }
 
       if(cnt == 0 && m_prevCount[slot] > 0)
@@ -250,10 +277,35 @@ public:
          bool bDD    = (m_peakDD[slot]  <= -m_ddMoneyTrigger);
          bool bDepth = (m_maxDepth[slot] >= m_depthTrigger);
          WriteOutcome(slot, magic, bDD, bDepth);
-         if(bDD || bDepth)
+         if((bDD || bDepth) && !m_dumped[slot])
             DumpRootCause(slot, magic);
+         m_dumped[slot]=false; m_openBreached[slot]=false;
       }
 
       m_prevCount[slot] = cnt;
+   }
+
+   void Flush(MA_Trend *trend, TradeManager *tm0, TradeManager *tm1, TradeManager *tm2, TradeManager *tm3)
+   {
+      if(!m_enabled) return;
+      TradeManager *tms[4];
+      tms[0]=tm0; tms[1]=tm1; tms[2]=tm2; tms[3]=tm3;
+      for(int slot=0; slot<4; slot++)
+      {
+         TradeManager *tm = tms[slot];
+         if(tm == NULL) continue;
+         int cnt = tm.GetTradeCount();
+         if(cnt > 0 && m_prevCount[slot] > 0)
+         {
+            double prof = tm.GetCurrentProfit();
+            if(prof < m_peakDD[slot]) m_peakDD[slot] = prof;
+            m_lastProfit[slot] = prof;
+            bool bDD    = (m_peakDD[slot]  <= -m_ddMoneyTrigger);
+            bool bDepth = (m_maxDepth[slot] >= m_depthTrigger);
+            WriteOutcomeOpen(slot, tm.m_MagicNumber, bDD, bDepth);
+            if(!m_dumped[slot])
+               DumpRootCause(slot, tm.m_MagicNumber);
+         }
+      }
    }
 };
