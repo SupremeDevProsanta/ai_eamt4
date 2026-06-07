@@ -14,6 +14,10 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
 
 ## 2026-06-07
 
+- **MavericProPlus v3.4: fix logger blind spot (blowup basket).** Logger previously only logged on basket CLOSE, so an end-of-run blowup basket (never closes) was invisible — making crashing runs look "all recovered". Added mid-run root-cause dump on breach + `Flush()` from `deinit()` to capture still-open baskets (`close_time=OPEN_AT_END`). EA **v3.4**, pushed (4ec9097). NOTE: earlier "direction isn't the cause / volatility is" finding is provisional — it was computed on data that excluded the blowup; must re-confirm with a v3.4 run of the crashing case.
+  - Files: `Include/Sale/EntryLogger.mqh`, `Sale/MavericProPlus.mq4`
+  - Detail: [worklog.md](./worklog.md) → 2026-06-07
+
 - **MavericProPlus v3.3: root-cause replay logger.** Added symbol + entry-reason columns and a third CSV `MPP_rootcause_<tag>.csv` that, when a basket breaches acceptable drawdown (money OR grid depth), dumps a per-bar look-back(50)/entry/look-forward(to close) reconstruction of OHLC+MAs+SAR+H1/H4 trend — the tool to find the exact root cause of a wrong entry. EA at **v3.3**, pushed (commit b673a9c).
   - Files: `Include/Sale/EntryLogger.mqh`, `Sale/MavericProPlus.mq4`
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
@@ -30,9 +34,4 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
   - Files: `Sale/MavericProPlus.mq4`
   - Detail: [2026-06-01-mavericproplus-phase0-deadcode.md](./2026-06-01-mavericproplus-phase0-deadcode.md)
 
-- **MavericProPlus refactor — Phase 1: extract small helpers.** Added `CanBuy()`, `CanSell()`, `IsNewM30Bar()`, `ApplyComment()`. Replaced 4+4 `TradeDirn` checks, 2 NewBarTime reset patterns, 56 SetTradeComment+bIsTestMode patterns. File 1376 → 1156 lines. Zero behavior change.
-  - Files: `Sale/MavericProPlus.mq4`
-  - Detail: [2026-06-01-mavericproplus-phase1-helpers.md](./2026-06-01-mavericproplus-phase1-helpers.md)
-
-- **MavericProPlus full logic analysis (read-only).** Connected `Experts/Sale` + `Include/Sale`; read main EA and the 3 includes (Trend_Math_Terex2, ProsantTradeManagerLight, ProsantaConst). Confirmed: trend-pullback martingale scalper, 4 baskets (Buy/Sal/TurboBuy/TurboSal, magic 14000+), M30 signals / M15 entry gate, ~30+ `CheckTrend_NN` MA+SAR rules, 35-pip grid w/ ×1.5–2 lot adds, ~10-pip basket TP, balance-step lot sizing. No code changed.
-  - Files: (read-only) `Sale/MavericProPlus.mq4`, `I
+- **MavericProPlus refactor — Phase 1: extract small helpers.** Added `CanBuy()`, `CanSell()`, `IsNewM30Bar()`, `ApplyComment()`. Replaced 4+4 `TradeDirn` checks, 2 NewBarTime reset patterns, 56 SetTradeComment+bIsTestMode patterns. File
