@@ -6,6 +6,16 @@ Day-by-day timeline of all work. Newest entries on top within each day.
 
 ## 2026-06-07 (Sunday)
 
+### Python backtesting — strategy validated from data (NZDCAD 20y)
+Built a fast Python backtest harness using the broker HST bar data (`history/ICMarketsSC-Demo01/NZDCAD30.hst`=M30 254k bars, `NZDCAD60.hst`=H1, 2006-2026). FXT tick files were 18.9GB sparse-padded, impractical; HST bars are clean and sufficient. Files in repo `research/`: `hst.py` (MT4 .hst v401/400 parser), `trendrider_bt.py`, `meanrev_bt.py`, `FINDINGS.md`.
+Cost model: ECN 0.3 pip + $7/lot commission, %-risk sizing, single position, hard stop, no martingale.
+**Findings:**
+- **Trend-following REJECTED on NZDCAD** — PF 0.44 base (blew up); even at ZERO spread only PF 0.79-0.88 → no real edge. NZDCAD does not trend cleanly. (EURUSD trend edge is real but thin: PF 1.03 zero-spread, ~0.97 at 2pip — killed by costs + overtrading. Confirms TrendRider needs a trending pair + ECN costs, not NZDCAD.)
+- **Mean-reversion VALIDATED on NZDCAD** — fade price >=4*ATR from SMA100 + RSI<=15/>=85, TP 2*ATR, hard stop 3.5*ATR, time stop 72 bars, 0.5% risk. **Survives out-of-sample**: train 2006-2016 PF 1.26 DD 3.5%; test 2016-2026 PF 1.07 DD 5.9%. Overfit variants (looser RSI) correctly went PF<1 OOS and were rejected.
+**Why this matters:** This is the user's "huge loss" insight playing out — the martingale only "worked" on NZDCAD *because NZDCAD mean-reverts*; it had a hidden blowup tail. A proper risk-bounded MR system captures the same reversion edge with bounded <6% drawdown instead of 80% ruin. Modest (~50 trades/yr, small net) but real and robust.
+**Caveats recorded:** cost model is an estimate; usd_per_pip for NZDCAD approximate; thin margin sensitive to real fills — validate on broker tick data before live.
+**Next:** port validated MR rules to a clean MQL4 EA; test MR on other rangebound crosses (AUDCAD/AUDNZD/EURCHF); re-confirm with real broker spread.
+
 ### New EA: TrendRider v1.0 (fresh trend-following, no martingale)
 Built a clean-room standalone EA `Experts/Sale/TrendRider.mq4` per user request — a genuine trend-following system, not a patch on MavericProPlus, and with NO dependency on the tangled Trend_Math includes.
 Design (all four user choices folded in: multi-symbol, trend+pyramiding, ATR sizing, "all" signal types combined):
@@ -19,14 +29,4 @@ Static-verified: braces/parens balanced, OnInit/OnTick/OnDeinit signatures corre
 **Next:** compile, then backtest on NZDCAD/EURUSD; compare vs MavericProPlus — expect far smaller drawdown, lower win-rate, but bounded risk (no blowup tail).
 
 ### v3.4 — fix logger blind spot: capture the blowup basket
-**Key discovery while analysing the crash chart (equity 15,895 -> 3,285 at end).** The earlier NZDCAD analysis kept showing "all baskets recovered, 265/3 wins" — wrong conclusion caused by a logging bug, NOT by the strategy being safe. Root cause: the logger only wrote an outcome row + root-cause dump when a basket CLOSES (count->0). A blowup basket keeps adding lots and NEVER closes before the test/account ends, so it produced no outcome and no root-cause => invisible. The fatal end-of-run basket was structurally excluded from every stat.
-Also corrected understanding: `float_profit` logged at ADD time is ~0 (logged the instant price hits the add level); only `peak_floating_dd` (tracked per tick, written at close) is meaningful — and for the killer it was never written.
-**Fix (v3.4):**
-- `Track()` now also dumps root-cause MID-RUN the moment a live basket breaches DD-money OR grid-depth (guarded by `m_dumped[slot]`, once per basket).
-- New `Flush(trend,tm0..tm3)` called from EA `deinit()` BEFORE managers are deleted: for any still-open basket it finalizes peak DD, writes an outcome row with `close_time=OPEN_AT_END`, and dumps the root-cause replay. This captures the end-of-test blowup.
-- VERSION 3.3 -> 3.4. Pushed (commit 4ec9097).
-**Analysis caveats recorded:** (1) Original "wrong direction causes blowup" hypothesis was NOT supported by the (incomplete) NZDCAD data — with-trend entries actually drew down worse, deep baskets clustered in COVID-Mar2020 volatility, and a few checks dominated (`Turbo2 T2 DN3`, `Check58*`). BUT this was on data missing the blowup, so it's provisional. (2) Real risk signal so far points to VOLATILITY REGIME + specific weak checks, not trend direction. Must re-confirm once v3.4 captures an actual blowup. (3) The crash chart x-axis is trade-number, not date.
-**Next:** re-run the crashing case with v3.4 so the OPEN_AT_END basket + its root-cause appear; then diagnose the true account-killer.
-
-### v3.3 — root-cause replay + symbol/entry-reason columns
-Extended `EntryLogger.mqh` per user request: log the FX pair, entry time, and entry reason explicitly, and auto-produce a root-cause reconstruction for 
+**Key discovery while analysing the crash chart (equity 15,895 -> 3,285 at end).** The earlier NZDCAD analysis kept showing "all baskets recovered, 265/3 wins" — wrong conclusion caused by a logging bug, NOT by the strategy being safe. Root cause: the logger only wrote an outcome row + root-cause dump when a ba

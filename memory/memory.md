@@ -14,6 +14,10 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
 
 ## 2026-06-07
 
+- **Python backtesting: trend rejected, mean-reversion validated on NZDCAD.** Built fast Python harness over 20y NZDCAD HST bars (`research/`). Trend-following has NO edge on NZDCAD (PF<0.9 even zero-spread); EURUSD trend edge thin and cost-killed. Mean-reversion (fade 4*ATR extremes + RSI, hard stop, no martingale) SURVIVES out-of-sample: train PF 1.26 / test PF 1.07, DD<6%. Key insight: martingale only "worked" on NZDCAD because it mean-reverts — MR captures that edge with bounded risk. Modest but robust. Pushed (0652bb9).
+  - Files: `research/hst.py`, `research/trendrider_bt.py`, `research/meanrev_bt.py`, `research/FINDINGS.md`
+  - Detail: [worklog.md](./worklog.md) → 2026-06-07
+
 - **New EA: TrendRider v1.0.** Fresh standalone trend-following EA (`Experts/Sale/TrendRider.mq4`), no martingale, no Trend_Math dependency. EMA-stack(20/50/100 H1)+ADX>22 trend filter; pullback-OR-Donchian-breakout entry; ATR-based stop + true %-risk sizing; add-to-winners pyramiding (max 4, +1 ATR steps) with 3*ATR chandelier trail; never averages losers; multi-symbol. Static-checked, not yet compiled. Pushed (25ad1b9).
   - Files: `Sale/TrendRider.mq4`
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
@@ -23,15 +27,4 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
 
 - **MavericProPlus v3.3: root-cause replay logger.** Added symbol + entry-reason columns and a third CSV `MPP_rootcause_<tag>.csv` that, when a basket breaches acceptable drawdown (money OR grid depth), dumps a per-bar look-back(50)/entry/look-forward(to close) reconstruction of OHLC+MAs+SAR+H1/H4 trend — the tool to find the exact root cause of a wrong entry. EA at **v3.3**, pushed (commit b673a9c).
-  - Files: `Include/Sale/EntryLogger.mqh`, `Sale/MavericProPlus.mq4`
-  - Detail: [worklog.md](./worklog.md) → 2026-06-07
-
-- **Git version control + GitHub push.** Set up versioning workflow (VERSION bump + commit per change). MT4 folders are on a mount that blocks in-place git, so a working copy is pushed to `github.com/SupremeDevProsanta/ai_eamt4` (token at `E:\project\github\git_token.txt`). Pushed baseline v3.1, v3.2 (logger), and `.gitattributes`. EA now at **v3.2**.
-  - Files: repo `ai_eamt4` (Experts/Sale, Include/Sale, document, memory)
-  - Detail: [worklog.md](./worklog.md) → 2026-06-07
-
----
-
-## 2026-06-01
-
-- **MavericProPlus refactor — Phase 0: dead code removal.** Removed `Open_Pos_1()`, `DrawObject
+  - Files: `Include/Sale/Ent
