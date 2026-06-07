@@ -14,6 +14,10 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
 
 ## 2026-06-07
 
+- **Final NZDCAD EA: MeanReverter v1.0.** Iterated ~40 variants (OOS-ranked); winner = Bollinger(20,k3) fade + RSI(14) 20/80, SL 4*ATR, TP 2.5*ATR, exit at BB mid, 0.5% risk, single position, no martingale. OOS PF 1.142 / DD 3.1% (MT4-matching population-std). Walk-forward: regime-dependent (profitable 2018+, flat before) — modest+bounded, not all-weather. Locked in & ported to `Experts/Sale/MeanReverter.mq4` (uses real iBands/iRSI/iATR). Not yet compiled. Pushed (9ef8ee1).
+  - Files: `Sale/MeanReverter.mq4`, `research/engine.py`, `research/round1-3.py`, `research/FINDINGS.md`
+  - Detail: [worklog.md](./worklog.md) → 2026-06-07
+
 - **Python backtesting: trend rejected, mean-reversion validated on NZDCAD.** Built fast Python harness over 20y NZDCAD HST bars (`research/`). Trend-following has NO edge on NZDCAD (PF<0.9 even zero-spread); EURUSD trend edge thin and cost-killed. Mean-reversion (fade 4*ATR extremes + RSI, hard stop, no martingale) SURVIVES out-of-sample: train PF 1.26 / test PF 1.07, DD<6%. Key insight: martingale only "worked" on NZDCAD because it mean-reverts — MR captures that edge with bounded risk. Modest but robust. Pushed (0652bb9).
   - Files: `research/hst.py`, `research/trendrider_bt.py`, `research/meanrev_bt.py`, `research/FINDINGS.md`
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
@@ -22,9 +26,4 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
   - Files: `Sale/TrendRider.mq4`
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
 
-- **MavericProPlus v3.4: fix logger blind spot (blowup basket).** Logger previously only logged on basket CLOSE, so an end-of-run blowup basket (never closes) was invisible — making crashing runs look "all recovered". Added mid-run root-cause dump on breach + `Flush()` from `deinit()` to capture still-open baskets (`close_time=OPEN_AT_END`). EA **v3.4**, pushed (4ec9097). NOTE: earlier "direction isn't the cause / volatility is" finding is provisional — it was computed on data that excluded the blowup; must re-confirm with a v3.4 run of the crashing case.
-  - Files: `Include/Sale/EntryLogger.mqh`, `Sale/MavericProPlus.mq4`
-  - Detail: [worklog.md](./worklog.md) → 2026-06-07
-
-- **MavericProPlus v3.3: root-cause replay logger.** Added symbol + entry-reason columns and a third CSV `MPP_rootcause_<tag>.csv` that, when a basket breaches acceptable drawdown (money OR grid depth), dumps a per-bar look-back(50)/entry/look-forward(to close) reconstruction of OHLC+MAs+SAR+H1/H4 trend — the tool to find the exact root cause of a wrong entry. EA at **v3.3**, pushed (commit b673a9c).
-  - Files: `Include/Sale/Ent
+- **MavericProPlus v3.4: fix logger blind spot (blowup basket).** Logger previously only logged on basket CLOSE, so an end-of-run blowup basket (never closes) was invisible — making crashing runs look "all recovered". Added mid-run root-cause dump on breach + `Flush()` from `deinit()` to capture still-open baskets (`close_time=OPEN_AT_END`). EA **v3.4**, pushed (4ec9097). NOTE: earlier "direction isn't the cause / volatility is" finding is provisional — it was computed on da
