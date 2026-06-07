@@ -6,6 +6,13 @@ Day-by-day timeline of all work. Newest entries on top within each day.
 
 ## 2026-06-07 (Sunday)
 
+### NZDCAD trade frequency + fine-tune to MeanReverter v1.1
+- Trade frequency (full 20.4y, strict model): **~4 trades/month** (mean 3.98, median 4), 978 total, ~48/yr, only 1 month of 246 had zero trades. (User's USDCHF screenshot showing ~36 trades was a shorter/different test.)
+- User asked to fine-tune for NZDCAD only. Did it disciplined: tune in-sample, accept only if OOS ALSO improves AND walk-forward holds.
+- **New best: BbK 3.2, SlAtr 4.5, TpAtr 3.0** (stricter than v1.0). OOS PF 1.142→1.345, maxDD 3.1%→2.0%, net 645→753. Walk-forward 4y blocks: profitable **4 of 5** (only 2010-2014 neg) vs old config which was profitable only 1 of 5 — so the tune spread the edge across eras instead of relying on one window. ~3 trades/month now (stricter).
+- Caveat recorded: even tuned, NO config wins every 4y block (2010-2014 still negative). NZDCAD MR is genuinely regime-dependent; stop tuning to avoid noise-fitting.
+- Updated `Experts/Sale/MeanReverter.mq4` to **v1.1** with new defaults. Pushed. research/tpm.py + finetune_nzdcad.py.
+
 ### "More trades / combine indicators?" tested + cross-pair validation
 User asked why so few trades (~36 in 5y on USDCHF visual) and why not combine indicators (screenshot showed USDCHF+MACD).
 - Tested loosening BB band (k1.5-2.5) + looser RSI + MACD-histogram-turn confirmation. EVERY looser variant went OOS PF<1 (0.90-0.98), DD 13-43%, despite 200-460 trades/yr. Adding indicators only filters; it does not create edge. Strict k3+RSI20/80 stays the only OOS-profitable config. "Few trades" is a feature (waits for rare real dislocations).
@@ -22,9 +29,4 @@ Ran an OOS-ranked iterative loop (~40 variants, train 2006-2016 / test 2016-2026
 - Built `Experts/Sale/MeanReverter.mq4` v1.0 — uses real iBands/iRSI/iATR, single position, hard SL+TP broker-side, exit-at-mid + time stop, %-risk sizing, NO martingale. Static-checked (balanced, handlers/sigs correct). Not yet compiled. Pushed (9ef8ee1).
 **Next:** compile + forward/visual backtest in MT4 to confirm the Python edge replicates on broker data; optionally validate same rules on AUDCAD/AUDNZD/EURCHF for cross-pair robustness.
 
-### Python backtesting — strategy validated from data (NZDCAD 20y)
-Built a fast Python backtest harness using the broker HST bar data (`history/ICMarketsSC-Demo01/NZDCAD30.hst`=M30 254k bars, `NZDCAD60.hst`=H1, 2006-2026). FXT tick files were 18.9GB sparse-padded, impractical; HST bars are clean and sufficient. Files in repo `research/`: `hst.py` (MT4 .hst v401/400 parser), `trendrider_bt.py`, `meanrev_bt.py`, `FINDINGS.md`.
-Cost model: ECN 0.3 pip + $7/lot commission, %-risk sizing, single position, hard stop, no martingale.
-**Findings:**
-- **Trend-following REJECTED on NZDCAD** — PF 0.44 base (blew up); even at ZERO spread only PF 0.79-0.88 → no real edge. NZDCAD does not trend cleanly. (EURUSD trend edge is real but thin: PF 1.03 zero-spread, ~0.97 at 2pip — killed by costs + overtrading. Confirms TrendRider needs a trending pair + ECN costs, not NZDCAD.)
-- **Mean-reversion VALIDATED on NZDCAD** — fade price >=4*ATR from SMA100 + RSI<=15/>=85, TP 2*ATR, hard stop 3.5*ATR, time stop 72 bars, 0.5% risk. **Survives out-of-sample**: t
+### Pyth
