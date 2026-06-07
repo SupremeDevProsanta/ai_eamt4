@@ -1,0 +1,3 @@
+*.mqh text
+*.md  text
+*.mq4 -text
