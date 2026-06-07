@@ -13,11 +13,15 @@
 //|     Exit   : take-profit at TpAtr*ATR, OR price returns to the    |
 //|              Bollinger mid (SMA20), OR hard stop SlAtr*ATR,        |
 //|              OR time stop after TimeStopBars bars.                 |
+//|     v1.2  : optional breakeven-LOCK (lock min profit once ahead)   |
+//|              + TRAILING stop with ATR gap. Default ON (gentle).    |
+//|              Note: backtest-neutral-to-slightly-lower net; lowers  |
+//|              drawdown. MR edge is the mid-exit, not trailing.      |
 //|     Risk   : lot sized so the hard stop = RiskPercent of balance. |
 //|     One position at a time. Never averages losers.                |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, Prosanta"
-#property version   "1.1"
+#property version   "1.2"
 #property strict
 
 //==================== INPUTS ====================
@@ -40,6 +44,14 @@ input double  SlAtr        = 4.5;      // hard stop = SlAtr * ATR
 input double  TpAtr        = 3.0;      // take profit = TpAtr * ATR
 input bool    ExitAtMid     = true;    // also exit when price returns to BB mid
 input int     TimeStopBars  = 96;      // close after N bars if still open
+
+input string  _mgmt     = "==== Exit management (v1.2, default ON) ====";
+input bool    UseBreakevenLock = true; // lock a minimum profit once trade is ahead
+input double  LockTriggerAtr   = 2.0;  // arm lock when profit >= this * ATR(at entry)
+input double  LockProfitAtr     = 1.0; // SL locked to entry +/- this * ATR(at entry)
+input bool    UseTrailing        = true;// trail the stop once sufficiently in profit
+input double  TrailStartAtr        = 2.0;// begin trailing when profit >= this * ATR
+input double  TrailGapAtr            = 2.0;// trail gap behind price = this * ATR(entry)
 
 input string  _risk     = "==== Risk / Sizing ====";
 input double  RiskPercent   = 0.5;     // % balance risked to the hard stop
@@ -145,12 +157,62 @@ void ManageOpen()
    }
 }
 
+// breakeven-lock + trailing-stop-with-gap for the single open position.
+// Distances are in ATR measured at the ENTRY bar (matches the backtest).
+// SL only ever ratchets in the favorable direction; broker min-stop respected.
+void ManageStops()
+{
+   if(!UseBreakevenLock && !UseTrailing) return;
+   for(int i=0;i<OrdersTotal();i++)
+   {
+      if(!OrderSelect(i,SELECT_BY_POS,MODE_TRADES)) continue;
+      if(OrderSymbol()!=Symbol() || OrderMagicNumber()!=MagicNumber) continue;
+
+      int sh = iBarShift(NULL,0,OrderOpenTime(),false);
+      double atrE = iATR(NULL,0,AtrPeriod, sh);
+      if(atrE<=0) atrE = ATRv(1);
+      if(atrE<=0) continue;
+
+      double entry  = OrderOpenPrice();
+      double curSL  = OrderStopLoss();
+      double minDist= MarketInfo(Symbol(),MODE_STOPLEVEL)*Point;
+
+      if(OrderType()==OP_BUY)
+      {
+         double fav   = Bid - entry;
+         double newSL = curSL;
+         if(UseBreakevenLock && fav >= LockTriggerAtr*atrE)
+            newSL = MathMax(newSL, entry + LockProfitAtr*atrE);
+         if(UseTrailing && fav >= TrailStartAtr*atrE)
+            newSL = MathMax(newSL, Bid - TrailGapAtr*atrE);
+         if(newSL > Bid - minDist) newSL = Bid - minDist;      // keep clear of price
+         if(newSL > curSL + Point*0.5)
+            if(!OrderModify(OrderTicket(),entry,NormalizeDouble(newSL,Digits),OrderTakeProfit(),0,clrNONE))
+               Print("OrderModify(BUY) failed ",GetLastError());
+      }
+      else if(OrderType()==OP_SELL)
+      {
+         double fav   = entry - Ask;
+         double newSL = curSL;
+         if(UseBreakevenLock && fav >= LockTriggerAtr*atrE)
+            newSL = MathMin(newSL, entry - LockProfitAtr*atrE);
+         if(UseTrailing && fav >= TrailStartAtr*atrE)
+            newSL = MathMin(newSL, Ask + TrailGapAtr*atrE);
+         if(newSL < Ask + minDist) newSL = Ask + minDist;      // keep clear of price
+         if(newSL < curSL - Point*0.5)
+            if(!OrderModify(OrderTicket(),entry,NormalizeDouble(newSL,Digits),OrderTakeProfit(),0,clrNONE))
+               Print("OrderModify(SELL) failed ",GetLastError());
+      }
+   }
+}
+
 //==================== EVENTS ====================
 int OnInit(){ g_lastBar=0; return(INIT_SUCCEEDED); }
 void OnDeinit(const int reason){}
 
 void OnTick()
 {
+   ManageStops();                      // breakeven-lock + trailing (v1.2)
    ManageOpen();                       // exit logic every tick (TP/SL are broker-side)
 
    if(!NewBar()) return;               // entries once per bar
@@ -178,4 +240,4 @@ void OnTick()
    else if(TradeShorts && c1 > up1 && rsi1 >= RsiShort)
       OpenTrade(OP_SELL, CalcLot(stopDist), stopDist, tpDist);
 }
-//+----------------------------------------------------------------
+//+------------------------------------------------------------------+
