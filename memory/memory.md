@@ -14,6 +14,10 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
 
 ## 2026-06-07
 
+- **MavericProPlus v3.3: root-cause replay logger.** Added symbol + entry-reason columns and a third CSV `MPP_rootcause_<tag>.csv` that, when a basket breaches acceptable drawdown (money OR grid depth), dumps a per-bar look-back(50)/entry/look-forward(to close) reconstruction of OHLC+MAs+SAR+H1/H4 trend — the tool to find the exact root cause of a wrong entry. EA at **v3.3**, pushed (commit b673a9c).
+  - Files: `Include/Sale/EntryLogger.mqh`, `Sale/MavericProPlus.mq4`
+  - Detail: [worklog.md](./worklog.md) → 2026-06-07
+
 - **Git version control + GitHub push.** Set up versioning workflow (VERSION bump + commit per change). MT4 folders are on a mount that blocks in-place git, so a working copy is pushed to `github.com/SupremeDevProsanta/ai_eamt4` (token at `E:\project\github\git_token.txt`). Pushed baseline v3.1, v3.2 (logger), and `.gitattributes`. EA now at **v3.2**.
   - Files: repo `ai_eamt4` (Experts/Sale, Include/Sale, document, memory)
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
@@ -31,7 +35,4 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
   - Detail: [2026-06-01-mavericproplus-phase1-helpers.md](./2026-06-01-mavericproplus-phase1-helpers.md)
 
 - **MavericProPlus full logic analysis (read-only).** Connected `Experts/Sale` + `Include/Sale`; read main EA and the 3 includes (Trend_Math_Terex2, ProsantTradeManagerLight, ProsantaConst). Confirmed: trend-pullback martingale scalper, 4 baskets (Buy/Sal/TurboBuy/TurboSal, magic 14000+), M30 signals / M15 entry gate, ~30+ `CheckTrend_NN` MA+SAR rules, 35-pip grid w/ ×1.5–2 lot adds, ~10-pip basket TP, balance-step lot sizing. No code changed.
-  - Files: (read-only) `Sale/MavericProPlus.mq4`, `Include/Sale/*.mqh`
-  - Detail: [2026-06-01-mavericproplus-logic-analysis.md](./2026-06-01-mavericproplus-logic-analysis.md)
-
-- **MavericProPlus Phase 3: entry/outcome condition logger.** Added `Include/Sale/EntryLogger.mqh` + wired into EA (include, globals, `ApplyComment` label capture, init register, 4× per-tick `Track`). Logs per-entry & per-add condition snapshots (MA stack, SAR, ma-cross, slopes, stoch/CCI, H1/H4 trend) and per-basket outcomes (max grid depth, peak floating drawdown, final P/L) to two CSVs. Behaviour-n
+  - Files: (read-only) `Sale/MavericProPlus.mq4`, `I
