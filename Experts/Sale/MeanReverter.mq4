@@ -17,7 +17,7 @@
 //|     One position at a time. Never averages losers.                |
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2026, Prosanta"
-#property version   "1.0"
+#property version   "1.1"
 #property strict
 
 //==================== INPUTS ====================
@@ -27,17 +27,17 @@ input string  TradeComment = "MeanReverter";
 input bool    TradeLongs   = true;
 input bool    TradeShorts   = true;
 
-input string  _sig      = "==== Signal (validated defaults) ====";
+input string  _sig      = "==== Signal (NZDCAD fine-tuned v1.1) ====";
 input int     BbPeriod    = 20;        // Bollinger period (= SMA mid)
-input double  BbK          = 3.0;      // band width in std-devs
+input double  BbK          = 3.2;      // band width in std-devs
 input int     RsiPeriod    = 14;
 input double  RsiLong      = 20.0;     // long when RSI <= this
 input double  RsiShort     = 80.0;     // short when RSI >= this
 
 input string  _exit     = "==== Exit ====";
 input int     AtrPeriod    = 14;
-input double  SlAtr        = 4.0;      // hard stop = SlAtr * ATR
-input double  TpAtr        = 2.5;      // take profit = TpAtr * ATR
+input double  SlAtr        = 4.5;      // hard stop = SlAtr * ATR
+input double  TpAtr        = 3.0;      // take profit = TpAtr * ATR
 input bool    ExitAtMid     = true;    // also exit when price returns to BB mid
 input int     TimeStopBars  = 96;      // close after N bars if still open
 
@@ -178,4 +178,4 @@ void OnTick()
    else if(TradeShorts && c1 > up1 && rsi1 >= RsiShort)
       OpenTrade(OP_SELL, CalcLot(stopDist), stopDist, tpDist);
 }
-//+------------------------------------------------------------------+
+//+----------------------------------------------------------------
