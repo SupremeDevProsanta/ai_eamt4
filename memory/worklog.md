@@ -6,6 +6,18 @@ Day-by-day timeline of all work. Newest entries on top within each day.
 
 ## 2026-06-07 (Sunday)
 
+### New EA: TrendRider v1.0 (fresh trend-following, no martingale)
+Built a clean-room standalone EA `Experts/Sale/TrendRider.mq4` per user request — a genuine trend-following system, not a patch on MavericProPlus, and with NO dependency on the tangled Trend_Math includes.
+Design (all four user choices folded in: multi-symbol, trend+pyramiding, ATR sizing, "all" signal types combined):
+- **Trend filter:** EMA stack 20>50>100 on H1 (TrendTF) AND ADX>22 → only trade a confirmed real trend, else stand aside.
+- **Entry (EntryTF M30):** pullback to fast EMA (within 0.5*ATR) OR Donchian(20) breakout, in the trend direction only.
+- **Risk:** ATR(14) stop = 2*ATR; lot sized so the stop = RiskPercent(1%) of balance (true risk sizing, unlike MPP's balance-step). Fallback fixed lot + MaxLot cap.
+- **Pyramiding:** adds to WINNERS only — new leg every +1*ATR advance beyond last leg, max 4 units. NEVER averages losers (the anti-martingale).
+- **Trailing:** chandelier stop at 3*ATR on every leg, runs each tick; a trend flip just stops adds and lets the trail close the position.
+- Inputs fully exposed for optimization (MA periods, ADX min, ATR mults, risk %, pyramid params, optional session filter).
+Static-verified: braces/parens balanced, OnInit/OnTick/OnDeinit signatures correct, all iMA/iATR/iADX/iHighest/iLowest usages valid. Not yet compiled in MetaEditor (user to compile). Pushed (commit 25ad1b9).
+**Next:** compile, then backtest on NZDCAD/EURUSD; compare vs MavericProPlus — expect far smaller drawdown, lower win-rate, but bounded risk (no blowup tail).
+
 ### v3.4 — fix logger blind spot: capture the blowup basket
 **Key discovery while analysing the crash chart (equity 15,895 -> 3,285 at end).** The earlier NZDCAD analysis kept showing "all baskets recovered, 265/3 wins" — wrong conclusion caused by a logging bug, NOT by the strategy being safe. Root cause: the logger only wrote an outcome row + root-cause dump when a basket CLOSES (count->0). A blowup basket keeps adding lots and NEVER closes before the test/account ends, so it produced no outcome and no root-cause => invisible. The fatal end-of-run basket was structurally excluded from every stat.
 Also corrected understanding: `float_profit` logged at ADD time is ~0 (logged the instant price hits the add level); only `peak_floating_dd` (tracked per tick, written at close) is meaningful — and for the killer it was never written.
@@ -17,15 +29,4 @@ Also corrected understanding: `float_profit` logged at ADD time is ~0 (logged th
 **Next:** re-run the crashing case with v3.4 so the OPEN_AT_END basket + its root-cause appear; then diagnose the true account-killer.
 
 ### v3.3 — root-cause replay + symbol/entry-reason columns
-Extended `EntryLogger.mqh` per user request: log the FX pair, entry time, and entry reason explicitly, and auto-produce a root-cause reconstruction for any basket that ends beyond acceptable drawdown.
-- entries/outcomes CSVs now carry `symbol`; direction written as BUY/SELL/NA; firing check kept as `reason_check`. Outcome rows add `breached_dd`/`breached_depth` flags.
-- New third file `MPP_rootcause_<tag>.csv`: when a basket breaches **DD money OR grid depth** at close, dump a per-bar replay — 50-bar **look-back** before entry, the **ENTRY** bar, then full **look-forward** to close — each row with OHLC + MA8/20/50/100/200/300 + SAR + H1/H4 trend. This is the look-back/look-forward root-cause tool to find where the entry went wrong.
-- `Init(tag, ddMoneyTrigger=50, depthTrigger=5, lookBack=50)`; EA `init()` wired with (50,5,50). User can tune later.
-- Implementation uses `iBarShift` to map entry/close times to M30 bar indices, then replays via iOpen/iHigh/iLow/iClose/iMA/iSAR by shift.
-- VERSION 3.2 → 3.3. Compiled clean earlier at 3.2; 3.3 adds only logging code (same patterns) — user to recompile. Pushed to GitHub (commit b673a9c). Note: workspace mount read-back lagged during this edit; host file verified correct via direct read before commit.
-
-### Git version control set up + pushed to GitHub
-Established the versioning workflow the user requested: every change bumps `#define VERSION` and is committed so any state can be reverted.
-- Discovered the MT4 folders (`Experts/Sale`, `Include/Sale`) are on a fuseblk mount that blocks git's lock/unlink ops → cannot `git init` in place.
-- Solution: maintain a real git working copy and push to remote `https://github.com/SupremeDevProsanta/ai_eamt4`.
--
+Extended `EntryLogger.mqh` per user request: log the FX pair, entry time, and entry reason explicitly, and auto-produce a root-cause reconstruction for 

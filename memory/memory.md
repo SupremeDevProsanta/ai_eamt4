@@ -14,6 +14,10 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
 
 ## 2026-06-07
 
+- **New EA: TrendRider v1.0.** Fresh standalone trend-following EA (`Experts/Sale/TrendRider.mq4`), no martingale, no Trend_Math dependency. EMA-stack(20/50/100 H1)+ADX>22 trend filter; pullback-OR-Donchian-breakout entry; ATR-based stop + true %-risk sizing; add-to-winners pyramiding (max 4, +1 ATR steps) with 3*ATR chandelier trail; never averages losers; multi-symbol. Static-checked, not yet compiled. Pushed (25ad1b9).
+  - Files: `Sale/TrendRider.mq4`
+  - Detail: [worklog.md](./worklog.md) → 2026-06-07
+
 - **MavericProPlus v3.4: fix logger blind spot (blowup basket).** Logger previously only logged on basket CLOSE, so an end-of-run blowup basket (never closes) was invisible — making crashing runs look "all recovered". Added mid-run root-cause dump on breach + `Flush()` from `deinit()` to capture still-open baskets (`close_time=OPEN_AT_END`). EA **v3.4**, pushed (4ec9097). NOTE: earlier "direction isn't the cause / volatility is" finding is provisional — it was computed on data that excluded the blowup; must re-confirm with a v3.4 run of the crashing case.
   - Files: `Include/Sale/EntryLogger.mqh`, `Sale/MavericProPlus.mq4`
   - Detail: [worklog.md](./worklog.md) → 2026-06-07
@@ -30,8 +34,4 @@ On startup, read this file (`memory.md`) for a one-line brief of every task. For
 
 ## 2026-06-01
 
-- **MavericProPlus refactor — Phase 0: dead code removal.** Removed `Open_Pos_1()`, `DrawObjects()`, 5 commented-out trend blocks, 8 commented `GetLinearRegressionSlope` calls. File 1454 → 1376 lines. Zero behavior change.
-  - Files: `Sale/MavericProPlus.mq4`
-  - Detail: [2026-06-01-mavericproplus-phase0-deadcode.md](./2026-06-01-mavericproplus-phase0-deadcode.md)
-
-- **MavericProPlus refactor — Phase 1: extract small helpers.** Added `CanBuy()`, `CanSell()`, `IsNewM30Bar()`, `ApplyComment()`. Replaced 4+4 `TradeDirn` checks, 2 NewBarTime reset patterns, 56 SetTradeComment+bIsTestMode patterns. File
+- **MavericProPlus refactor — Phase 0: dead code removal.** Removed `Open_Pos_1()`, `DrawObject
